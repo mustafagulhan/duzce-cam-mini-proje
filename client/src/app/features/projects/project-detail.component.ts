@@ -26,10 +26,28 @@ import { TaskItem } from '../../models/task-item.model';
         <h4>Görevler</h4>
         <ul>
           <li *ngFor="let t of tasks">
-            <label>
-              <input type="checkbox" [checked]="t.isCompleted" (change)="onToggle(t)" />
-              <span [style.textDecoration]="t.isCompleted ? 'line-through' : 'none'">{{ t.title }}</span>
-            </label>
+            <ng-container *ngIf="editingTaskId !== t.id; else taskEditTpl">
+              <label>
+                <input type="checkbox" [checked]="t.isCompleted" (change)="onToggle(t)" />
+                <span [style.textDecoration]="t.isCompleted ? 'line-through' : 'none'">{{ t.title }}</span>
+              </label>
+              <button (click)="onTaskEditStart(t)" style="margin-left:8px">Düzenle</button>
+              <button (click)="onTaskDelete(t)" style="margin-left:4px">Sil</button>
+            </ng-container>
+
+            <ng-template #taskEditTpl>
+              <form [formGroup]="taskEditForm" (ngSubmit)="onTaskEditSave(t)">
+                <input type="text" formControlName="title" placeholder="Görev başlığı" />
+                <label style="margin-left:6px">
+                  <input type="checkbox" formControlName="isCompleted" /> Tamamlandı
+                </label>
+                <button type="submit" [disabled]="taskEditForm.invalid || submitting" style="margin-left:6px">Kaydet</button>
+                <button type="button" (click)="onTaskEditCancel()" style="margin-left:4px">Vazgeç</button>
+              </form>
+              <div *ngIf="taskEditForm.controls.title.touched && taskEditForm.controls.title.invalid" style="color:#b00020;">
+                Başlık zorunlu ve en az 2 karakter olmalı.
+              </div>
+            </ng-template>
           </li>
         </ul>
 
@@ -55,9 +73,15 @@ export class ProjectDetailComponent implements OnInit {
   loading = false;
   error: string | null = null;
   submitting = false;
+  editingTaskId: number | null = null;
 
   form = new FormGroup({
     title: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(2)] })
+  });
+
+  taskEditForm = new FormGroup({
+    title: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(2)] }),
+    isCompleted: new FormControl<boolean>(false, { nonNullable: true })
   });
 
   constructor(private route: ActivatedRoute, private projectsService: ProjectsService, private tasksService: TasksService) {}
@@ -121,6 +145,44 @@ export class ProjectDetailComponent implements OnInit {
       error: () => {
         this.error = 'Görev güncellenemedi.';
       }
+    });
+  }
+
+  onTaskEditStart(t: TaskItem): void {
+    this.editingTaskId = t.id;
+    this.taskEditForm.reset({ title: t.title, isCompleted: t.isCompleted });
+  }
+
+  onTaskEditCancel(): void {
+    this.editingTaskId = null;
+    this.taskEditForm.reset();
+  }
+
+  onTaskEditSave(t: TaskItem): void {
+    if (this.taskEditForm.invalid) return;
+    this.submitting = true;
+    const payload = {
+      title: this.taskEditForm.controls.title.value,
+      isCompleted: this.taskEditForm.controls.isCompleted.value
+    };
+    this.tasksService.update(t.id, payload).subscribe({
+      next: () => {
+        this.submitting = false;
+        this.editingTaskId = null;
+        this.loadTasks();
+      },
+      error: () => {
+        this.submitting = false;
+        this.error = 'Görev güncellenemedi.';
+      }
+    });
+  }
+
+  onTaskDelete(t: TaskItem): void {
+    if (!confirm('Görevi silmek istediğinize emin misiniz?')) return;
+    this.tasksService.delete(t.id).subscribe({
+      next: () => this.loadTasks(),
+      error: () => this.error = 'Görev silinemedi.'
     });
   }
 }
