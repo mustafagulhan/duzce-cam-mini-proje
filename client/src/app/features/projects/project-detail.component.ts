@@ -3,6 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ProjectsService } from '../../services/projects.service';
+import { TasksService } from '../../services/tasks.service';
 import { Project } from '../../models/project.model';
 import { TaskItem } from '../../models/task-item.model';
 
@@ -25,7 +26,10 @@ import { TaskItem } from '../../models/task-item.model';
         <h4>Görevler</h4>
         <ul>
           <li *ngFor="let t of tasks">
-            {{ t.title }}
+            <label>
+              <input type="checkbox" [checked]="t.isCompleted" (change)="onToggle(t)" />
+              <span [style.textDecoration]="t.isCompleted ? 'line-through' : 'none'">{{ t.title }}</span>
+            </label>
           </li>
         </ul>
 
@@ -56,7 +60,7 @@ export class ProjectDetailComponent implements OnInit {
     title: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(2)] })
   });
 
-  constructor(private route: ActivatedRoute, private projectsService: ProjectsService) {}
+  constructor(private route: ActivatedRoute, private projectsService: ProjectsService, private tasksService: TasksService) {}
 
   ngOnInit(): void {
     const idParam = this.route.snapshot.paramMap.get('id');
@@ -104,6 +108,18 @@ export class ProjectDetailComponent implements OnInit {
       error: () => {
         this.submitting = false;
         this.error = 'Görev eklenemedi.';
+      }
+    });
+  }
+
+  onToggle(t: TaskItem): void {
+    this.tasksService.toggleComplete(t.id, { isCompleted: !t.isCompleted }).subscribe({
+      next: () => {
+        // Basit yaklaşım: listeyi yeniden yükle
+        this.loadTasks();
+      },
+      error: () => {
+        this.error = 'Görev güncellenemedi.';
       }
     });
   }
