@@ -4,7 +4,6 @@ using Application.Common.Interfaces;
 using Application.Projects;
 using Infrastructure.Repositories;
 using Application.Tasks;
-using Domain.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 
