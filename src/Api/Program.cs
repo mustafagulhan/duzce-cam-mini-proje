@@ -1,0 +1,63 @@
+using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using Application.Common.Interfaces;
+using Application.Projects;
+using Infrastructure.Repositories;
+using Application.Tasks;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+
+builder.Services.AddControllers();
+// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+builder.Services.AddOpenApi();
+
+// EF Core DbContext configuration (SQLite by default; InMemory if USE_INMEMORY=true)
+var useInMemory = builder.Configuration.GetValue("USE_INMEMORY", false);
+if (useInMemory)
+{
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseInMemoryDatabase("AppDb"));
+}
+else
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+                           ?? "Data Source=app.db";
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseSqlite(connectionString));
+}
+
+// DI registrations
+builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
+builder.Services.AddScoped<ITaskItemRepository, TaskItemRepository>();
+builder.Services.AddScoped<IProjectService, ProjectService>();
+builder.Services.AddScoped<ITaskItemService, TaskItemService>();
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "API v1");
+    });
+}
+
+app.UseHttpsRedirection();
+
+// CORS
+var corsPolicy = "AllowClient";
+app.Services.GetService<IServiceCollection>();
+app.UseCors(builder =>
+    builder.WithOrigins("http://localhost:4200")
+           .AllowAnyHeader()
+           .AllowAnyMethod());
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
