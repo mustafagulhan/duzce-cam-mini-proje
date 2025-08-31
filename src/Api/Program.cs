@@ -4,6 +4,7 @@ using Application.Common.Interfaces;
 using Application.Projects;
 using Infrastructure.Repositories;
 using Application.Tasks;
+using Domain.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +13,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+// CORS policy
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowClient", policy =>
+        policy.WithOrigins("http://localhost:4200")
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+});
 
 // EF Core DbContext configuration (SQLite by default; InMemory if USE_INMEMORY=true)
 var useInMemory = builder.Configuration.GetValue("USE_INMEMORY", false);
@@ -49,15 +59,32 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 // CORS
-var corsPolicy = "AllowClient";
-app.Services.GetService<IServiceCollection>();
-app.UseCors(builder =>
-    builder.WithOrigins("http://localhost:4200")
-           .AllowAnyHeader()
-           .AllowAnyMethod());
+app.UseCors("AllowClient");
 
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Seed data (development)
+using (var scope = app.Services.CreateScope())
+{
+    var ctx = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    ctx.Database.EnsureCreated();
+    if (!ctx.Projects.Any())
+    {
+        var demo = new Project
+        {
+            Name = "Örnek Proje",
+            Description = "Demo verisi",
+            Tasks = new List<TaskItem>
+            {
+                new TaskItem { Title = "İlk görev" },
+                new TaskItem { Title = "İkinci görev", IsCompleted = true }
+            }
+        };
+        ctx.Projects.Add(demo);
+        ctx.SaveChanges();
+    }
+}
 
 app.Run();
