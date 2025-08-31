@@ -65,26 +65,11 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Seed data (development)
+// Ensure database created (no seed)
 using (var scope = app.Services.CreateScope())
 {
     var ctx = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     ctx.Database.EnsureCreated();
-    if (!ctx.Projects.Any())
-    {
-        var demo = new Project
-        {
-            Name = "Örnek Proje",
-            Description = "Demo verisi",
-            Tasks = new List<TaskItem>
-            {
-                new TaskItem { Title = "İlk görev" },
-                new TaskItem { Title = "İkinci görev", IsCompleted = true }
-            }
-        };
-        ctx.Projects.Add(demo);
-        ctx.SaveChanges();
-    }
 }
 
 app.Run();

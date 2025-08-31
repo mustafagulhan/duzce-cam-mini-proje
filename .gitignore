@@ -1,0 +1,25 @@
+# Build output
+**/bin/
+**/obj/
+
+# SQLite databases
+src/Api/app.db
+src/Api/app.db-shm
+src/Api/app.db-wal
+
+# IDE / OS
+.vscode/
+*.user
+*.suo
+.DS_Store
+Thumbs.db
+
+# Angular
+client/node_modules/
+client/dist/
+client/.angular/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-error.log*
